@@ -3,7 +3,7 @@ package pages
 type Stats struct {
 	PageCount  int
 	TotalBytes int
-	LinksFound []string
+	LinksFound int
 }
 
 type Item struct {
@@ -16,5 +16,5 @@ type Buffer struct {
 }
 
 type PagesSeen struct {
-	Elements map[string]struct{}
+	Elements map[string]struct{} //[normalized url]
 }
