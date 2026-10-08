@@ -17,4 +17,5 @@ type Buffer struct {
 
 type PagesSeen struct {
 	Elements map[string]struct{} //[normalized url]
+
 }
