@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"log"
 	"os"
 
@@ -9,10 +11,14 @@ import (
 
 func main() {
 
-	params, err := config.Load(os.Args[1:])
+	params, err := config.Load(os.Args[1:], os.Stdout)
+
+	if errors.Is(err, flag.ErrHelp) {
+		os.Exit(0)
+	}
+
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		os.Exit(2)
 	}
 
 	log.Println(params.MaxDepth)

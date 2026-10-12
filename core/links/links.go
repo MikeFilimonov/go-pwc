@@ -2,9 +2,43 @@ package links
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/publicsuffix"
 )
+
+func IsFromSameZone(source, input string) bool {
+
+	base, err := url.Parse(source)
+	if err != nil {
+		log.Printf("failed to parse source url %s: %v", source, err)
+		return false
+	}
+
+	tested, err := url.Parse(input)
+	if err != nil {
+		log.Printf("failed to parse tested url %s: %v", input, err)
+		return false
+	}
+
+	baseDomain, err := publicsuffix.EffectiveTLDPlusOne(base.Hostname())
+
+	if err != nil {
+		log.Printf("failed to get the base domain from %s: %v", base.Hostname(), err)
+		return false
+	}
+
+	testedDomain, err := publicsuffix.EffectiveTLDPlusOne(tested.Hostname())
+	if err != nil {
+		log.Printf("failed to get the tested domain from %s: %v", tested.Hostname(), err)
+		return false
+	}
+
+	return baseDomain == testedDomain
+
+}
 
 func Normalize(input *url.URL) string {
 
