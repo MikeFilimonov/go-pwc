@@ -63,3 +63,41 @@ func TestComplete(t *testing.T) {
 	}
 
 }
+
+func TestIsFromSameZone(t *testing.T) {
+
+	cases := []struct {
+		name          string
+		expected      bool
+		source        string
+		input         string
+		errorExpected bool
+	}{
+		{"same domains", true, "https://future.life.com", "https://current.life.com", false},
+		{"bare vs subdomain", true, "https://x.com", "https://y.x.com", false},
+		{".co.name trap", false, "https://sixseven.co.uk", "https://schools.co.uk", false},
+		{"parse failure", false, "http://a.com/\n", "http://tbd.a.com", true},
+		{"+/-", false, "http://six.com", "http://seven.ru/\n", true},
+		{"eTLD+1", false, "http://localhost", "http://generic.random", true},
+		{"githubbyO", false, "https://x.github.io", "https://y.github.io", false},
+		{"no_eTLD+1_input", false, "http://x.com", "http://127.0.0.1", true},
+	}
+
+	for _, item := range cases {
+
+		result, err := IsFromSameZone(item.source, item.input)
+
+		if (err != nil) != item.errorExpected {
+			t.Errorf("%s unexpected error:  %v, expected: %v, got: %v",
+				item.name, err, item.errorExpected, err != nil)
+			continue
+		}
+
+		if result != item.expected {
+			t.Errorf("%s: %v , expected: %v, got %v",
+				item.name, err, item.expected, result)
+		}
+
+	}
+
+}
