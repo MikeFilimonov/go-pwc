@@ -5,6 +5,19 @@ import (
 	"testing"
 )
 
+func TestFixURL(t *testing.T) {
+
+	cases := []struct {
+	}{}
+
+	for _, item := range cases {
+
+		_ = item
+
+	}
+
+}
+
 func TestNormalize(t *testing.T) {
 
 	cases := []struct {
@@ -45,6 +58,7 @@ func TestComplete(t *testing.T) {
 		{"root", "https://single.tone", "/", false, "https://single.tone/"},
 		{"empty_base", "", "/peace.html", false, "/peace.html"},
 		{"erroneous", "http://a.com/\n", "smth.html", true, ""},
+		{"go.dev", "go.dev", "go.dev", false, "/go.dev"},
 	}
 
 	for _, item := range cases {

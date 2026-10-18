@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	MaxDepth int
+	MaxDepth   int
+	InitialURL string
 }
 
 const defaultMaxDepth int = 5
@@ -39,7 +40,7 @@ func Load(args []string, output io.Writer) (*Config, error) {
 
 	set.Usage = func() {
 
-		fmt.Fprint(output, "run -h to get help\n")
+		fmt.Fprintln(output, "run -h to get help")
 		set.PrintDefaults()
 
 	}
@@ -47,7 +48,19 @@ func Load(args []string, output io.Writer) (*Config, error) {
 		return nil, err
 	}
 
-	config := Config{MaxDepth: maxDepth}
+	// no url
+	if set.NArg() == 0 {
+
+		description := "please, provide the initial URL to start processing"
+		fmt.Fprintln(output, description)
+		set.Usage()
+		return nil, fmt.Errorf("%s", description)
+	}
+
+	config := Config{
+		MaxDepth:   maxDepth,
+		InitialURL: set.Arg(0),
+	}
 
 	return &config, nil
 }

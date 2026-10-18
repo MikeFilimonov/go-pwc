@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/MikeFilimonov/go-pwc/config"
+	"github.com/MikeFilimonov/go-pwc/core/links"
 )
 
 func main() {
@@ -20,6 +21,14 @@ func main() {
 	if err != nil {
 		os.Exit(2)
 	}
+
+	input, err := links.FixURL(params.InitialURL)
+	if err != nil {
+		log.Println(err)
+		os.Exit(2)
+	}
+
+	_ = input
 
 	log.Println(params.MaxDepth)
 

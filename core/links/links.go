@@ -4,9 +4,47 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"unicode"
 
 	"golang.org/x/net/publicsuffix"
 )
+
+const (
+	separator       = "://"
+	schemeByDefault = "https://"
+)
+
+func FixURL(input string) (string, error) {
+
+	prefix, _, separatorDetected := strings.Cut(input, separator)
+	hasPrefixOfLetters := strings.ContainsFunc(prefix, func(r rune) bool {
+		return unicode.IsLetter(r)
+	})
+
+	if !separatorDetected || separatorDetected && !hasPrefixOfLetters {
+
+		_, err := url.Parse(schemeByDefault + prefix)
+		if err != nil {
+			return "", err
+		}
+
+		return schemeByDefault + prefix, nil
+	}
+
+	if separatorDetected &&
+		hasPrefixOfLetters &&
+		(prefix == "http" || prefix == "https") {
+
+		_, err := url.Parse(input)
+		if err != nil {
+			return "", err
+		}
+		return input, nil
+	}
+
+	return "", fmt.Errorf("failed to fix the url")
+
+}
 
 func IsFromSameZone(source, input string) (bool, error) {
 
