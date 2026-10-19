@@ -18,7 +18,8 @@ func TestFixURL(t *testing.T) {
 		{"empty", "", "", ErrEmptyHost},
 		{"go.dev:port", "go.dev:8080", "https://go.dev:8080", nil},
 		{"ftp", "ftp://go.dev", "", ErrUnsupportedScheme},
-		{"localhost", "localhost", "https://localhost", nil},
+		{"localhost", "localhost", "", ErrUnsupportedHost},
+		{"no_eTLD+1_input", "http://127.0.0.1", "", ErrUnsupportedHost},
 		{"fake scheme", "://go.dev", "", ErrUnsupportedScheme},
 		{"fake host", "https://", "", ErrEmptyHost},
 		{"keep the case", "go.dev/Login?next=https://go.dev/doc", "https://go.dev/Login?next=https://go.dev/doc", nil},
@@ -28,7 +29,8 @@ func TestFixURL(t *testing.T) {
 
 		result, err := FixURL(item.input)
 		if err != item.errorExpected {
-			t.Errorf("%s: unexpected error state: err=%v", item.name, err)
+			t.Errorf("%s: unexpected error state: expected \"%v\", got \"%v\"",
+				item.name, item.errorExpected, err)
 			continue
 		}
 

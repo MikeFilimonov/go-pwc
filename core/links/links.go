@@ -17,6 +17,7 @@ const (
 
 var (
 	ErrEmptyHost         = errors.New("please, provide a non-empty url")
+	ErrUnsupportedHost   = errors.New("localhost and ip hosts will be supported later")
 	ErrUnsupportedScheme = errors.New("unsupported scheme")
 )
 
@@ -35,9 +36,9 @@ func FixURL(input string) (string, error) {
 		prefix = strings.ToLower(prefix)
 	}
 
-	isPrefixValid := prefix == "http" || prefix == "https"
+	isValidPrefix := prefix == "http" || prefix == "https"
 
-	if hasScheme && !isPrefixValid {
+	if hasScheme && !isValidPrefix {
 		return "", ErrUnsupportedScheme
 	}
 
@@ -52,6 +53,12 @@ func FixURL(input string) (string, error) {
 
 	if len(parsedUrl.Hostname()) == 0 {
 		return "", ErrEmptyHost
+	}
+
+	_, err = publicsuffix.EffectiveTLDPlusOne(parsedUrl.Hostname())
+
+	if err != nil {
+		return "", ErrUnsupportedHost
 	}
 
 	return result, nil
