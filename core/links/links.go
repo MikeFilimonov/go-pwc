@@ -1,6 +1,7 @@
 package links
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,35 +15,46 @@ const (
 	schemeByDefault = "https://"
 )
 
+var (
+	ErrEmptyHost         = errors.New("please, provide a non-empty url")
+	ErrUnsupportedScheme = errors.New("unsupported scheme")
+)
+
 func FixURL(input string) (string, error) {
 
+	result := input
+
 	prefix, _, separatorDetected := strings.Cut(input, separator)
-	hasPrefixOfLetters := strings.ContainsFunc(prefix, func(r rune) bool {
-		return unicode.IsLetter(r)
+	hasPrefixOfLetters := !strings.ContainsFunc(prefix, func(r rune) bool {
+		return !unicode.IsLetter(r)
 	})
 
-	if !separatorDetected || separatorDetected && !hasPrefixOfLetters {
+	hasScheme := separatorDetected && hasPrefixOfLetters
 
-		_, err := url.Parse(schemeByDefault + prefix)
-		if err != nil {
-			return "", err
-		}
-
-		return schemeByDefault + prefix, nil
+	if hasScheme {
+		prefix = strings.ToLower(prefix)
 	}
 
-	if separatorDetected &&
-		hasPrefixOfLetters &&
-		(prefix == "http" || prefix == "https") {
+	isPrefixValid := prefix == "http" || prefix == "https"
 
-		_, err := url.Parse(input)
-		if err != nil {
-			return "", err
-		}
-		return input, nil
+	if hasScheme && !isPrefixValid {
+		return "", ErrUnsupportedScheme
 	}
 
-	return "", fmt.Errorf("failed to fix the url")
+	if !separatorDetected || !hasScheme {
+		result = schemeByDefault + input
+	}
+
+	parsedUrl, err := url.Parse(result)
+	if err != nil {
+		return "", err
+	}
+
+	if len(parsedUrl.Hostname()) == 0 {
+		return "", ErrEmptyHost
+	}
+
+	return result, nil
 
 }
 

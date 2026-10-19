@@ -8,11 +8,33 @@ import (
 func TestFixURL(t *testing.T) {
 
 	cases := []struct {
-	}{}
+		name          string
+		input         string
+		expected      string
+		errorExpected error
+	}{
+		{"default", "HTTPS://go.dev", "HTTPS://go.dev", nil},
+		{"nextPage", "go.dev/login?next=https://go.dev/doc", "https://go.dev/login?next=https://go.dev/doc", nil},
+		{"empty", "", "", ErrEmptyHost},
+		{"go.dev:port", "go.dev:8080", "https://go.dev:8080", nil},
+		{"ftp", "ftp://go.dev", "", ErrUnsupportedScheme},
+		{"localhost", "localhost", "https://localhost", nil},
+		{"fake scheme", "://go.dev", "", ErrUnsupportedScheme},
+		{"fake host", "https://", "", ErrEmptyHost},
+		{"keep the case", "go.dev/Login?next=https://go.dev/doc", "https://go.dev/Login?next=https://go.dev/doc", nil},
+	}
 
 	for _, item := range cases {
 
-		_ = item
+		result, err := FixURL(item.input)
+		if err != item.errorExpected {
+			t.Errorf("%s: unexpected error state: err=%v", item.name, err)
+			continue
+		}
+
+		if result != item.expected {
+			t.Errorf("%s: expected \"%s\", got \"%s\"", item.name, item.expected, result)
+		}
 
 	}
 
