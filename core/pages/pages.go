@@ -33,6 +33,32 @@ func (b *Buffer) Dequeue() (Item, bool) {
 }
 
 type PagesSeen struct {
-	Elements map[string]struct{} //[normalized url]
+	elements map[string]struct{} //[normalized url]
+
+}
+
+func (p *PagesSeen) Add(url string) {
+
+	if p.elements == nil {
+		p.elements = make(map[string]struct{})
+	}
+	p.elements[url] = struct{}{}
+
+}
+
+func (p *PagesSeen) Has(url string) bool {
+
+	_, success := p.elements[url]
+	return success
+
+}
+
+func (p *PagesSeen) Len() int {
+
+	if p.elements == nil {
+		return 0
+	}
+
+	return len(p.elements)
 
 }

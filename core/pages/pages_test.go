@@ -99,3 +99,61 @@ func TestQueueRoutinesCombo(t *testing.T) {
 	}
 
 }
+
+func TestAdd(t *testing.T) {
+
+	cases := []struct {
+		name           string
+		added          []string
+		expectedLength int
+	}{
+		{"default", []string{"acme.sixseven"}, 1},
+		{"clones", []string{"acme.sixseven", "acme.sixseven"}, 1},
+	}
+
+	for _, item := range cases {
+
+		var buffer PagesSeen
+
+		for _, v := range item.added {
+			buffer.Add(v)
+		}
+		if buffer.Len() != item.expectedLength {
+			t.Errorf("%s: expected seen count (%v) doesn't meet the real one (%v)",
+				item.name, item.expectedLength, buffer.Len())
+		}
+
+	}
+
+}
+
+func TestHas(t *testing.T) {
+
+	cases := []struct {
+		name     string
+		added    []string
+		searched string
+		found    bool
+	}{
+		{"default", []string{"acme.sixseven"}, "acme.sixseven", true},
+		{"clones", []string{"acme.sixseven", "acme.sixseven"}, "acme.sixseven", true},
+		{"inexistent", []string{"acme.sixseven"}, "rnd.generic", false},
+		{"zero", []string{}, "", false},
+	}
+
+	for _, item := range cases {
+
+		var buffer PagesSeen
+
+		for _, v := range item.added {
+			buffer.Add(v)
+		}
+
+		if buffer.Has(item.searched) != item.found {
+			t.Errorf("%s, unexpected search result: expected %v got %v",
+				item.name, item.found, buffer.Has(item.searched))
+		}
+
+	}
+
+}
