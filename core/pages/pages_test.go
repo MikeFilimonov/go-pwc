@@ -6,12 +6,16 @@ import (
 )
 
 var (
-	a = Item{Url: "a.html", Level: 1}
-	b = Item{Url: "b.html", Level: 1}
-	c = Item{Url: "c/a.html", Level: 2}
-	d = Item{Url: "d/b.html", Level: 2}
-	e = Item{Url: "d/b.html", Level: 3}
+	a = Item{URL: "a.html", Level: 1}
+	b = Item{URL: "b.html", Level: 1}
+	c = Item{URL: "c/a.html", Level: 2}
+	d = Item{URL: "d/b.html", Level: 2}
+	e = Item{URL: "d/b.html", Level: 3}
 )
+
+func TestParse(t *testing.T) {
+
+}
 
 func TestEnqueue(t *testing.T) {
 

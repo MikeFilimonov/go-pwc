@@ -1,5 +1,46 @@
 package pages
 
+import (
+	"bytes"
+
+	"golang.org/x/net/html"
+)
+
+const (
+	linkTagElement   = "a"
+	refAttributeName = "href"
+)
+
+func Parse(input []byte) ([]string, error) {
+
+	data, err := html.Parse(bytes.NewBuffer(input))
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, 0)
+
+	for item := range data.Descendants() {
+
+		if item.Type == html.ElementNode &&
+			item.Data == linkTagElement {
+
+			for _, attribute := range item.Attr {
+
+				if attribute.Key == refAttributeName {
+					result = append(result, attribute.Val)
+					break
+				}
+
+			}
+
+		}
+	}
+
+	return result, nil
+
+}
+
 type Stats struct {
 	PageCount  int
 	TotalBytes int
@@ -7,7 +48,7 @@ type Stats struct {
 }
 
 type Item struct {
-	Url   string
+	URL   string
 	Level int
 }
 
