@@ -110,7 +110,7 @@ func Normalize(input *url.URL) string {
 	}
 
 	path := input.EscapedPath()
-	if len(path) > 1 && strings.HasSuffix(path, "/") {
+	if strings.HasSuffix(path, "/") {
 		path = path[:len(path)-1]
 	}
 

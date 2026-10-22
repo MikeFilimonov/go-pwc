@@ -43,7 +43,7 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 			continue
 		}
 		isFromSameZone, err := links.IsFromSameZone(crawler.startURL, page.URL)
-		if !isFromSameZone {
+		if err != nil || !isFromSameZone {
 			continue
 		}
 

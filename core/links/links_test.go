@@ -53,7 +53,8 @@ func TestNormalize(t *testing.T) {
 		{"default_port", "https://marvel.co:443/semiconductors.htm", "https://marvel.co/semiconductors.htm"},
 		{"fragments", "https://abc.com#memo", "https://abc.com"},
 		{"surreal_protocol_with_trailing_slash", "sptth://com.ru.test.co/generandom/", "sptth://com.ru.test.co/generandom"},
-		{"singletone", "/", "/"},
+		{"singletone", "https://go.dev/", "https://go.dev"},
+		{"empty", "https://go.dev", "https://go.dev"},
 	}
 
 	for _, item := range cases {
