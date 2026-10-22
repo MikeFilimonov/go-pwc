@@ -42,6 +42,10 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 		if err != nil {
 			continue
 		}
+		isFromSameZone, err := links.IsFromSameZone(crawler.startURL, page.URL)
+		if !isFromSameZone {
+			continue
+		}
 
 		crawler.stats.PageCount++
 		crawler.stats.TotalBytes += len(page.Body)
