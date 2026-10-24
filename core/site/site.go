@@ -2,6 +2,7 @@ package site
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/MikeFilimonov/go-pwc/core/links"
@@ -47,6 +48,21 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 			continue
 		}
 
+		pageURL, err := url.Parse(page.URL)
+		if err != nil {
+			continue
+		}
+
+		normalizedPageURL := links.Normalize(pageURL)
+
+		isDuplicate := item.URL != normalizedPageURL &&
+			crawler.seenSet.Has(normalizedPageURL)
+		if isDuplicate {
+			continue
+		}
+
+		crawler.seenSet.Add(normalizedPageURL)
+
 		crawler.stats.PageCount++
 		crawler.stats.TotalBytes += len(page.Body)
 		fmt.Printf("[%v]: url:%s, level: %v \n", time.Now(), page.URL, item.Level)
@@ -58,9 +74,19 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 				continue
 			}
 
+			// pageURL, err := url.Parse(page.URL)
+			// if err != nil {
+			// 	continue
+			// }
+			// normalized := links.Normalize(pageURL)
+			// for _, element := range hrefs {
+			// 	crawler.handleURL(normalized, element, item.Level)
+			// }
+
 			for _, element := range hrefs {
 				crawler.handleURL(page.URL, element, item.Level)
 			}
+
 		}
 
 	}
