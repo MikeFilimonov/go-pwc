@@ -74,15 +74,6 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 				continue
 			}
 
-			// pageURL, err := url.Parse(page.URL)
-			// if err != nil {
-			// 	continue
-			// }
-			// normalized := links.Normalize(pageURL)
-			// for _, element := range hrefs {
-			// 	crawler.handleURL(normalized, element, item.Level)
-			// }
-
 			for _, element := range hrefs {
 				crawler.handleURL(page.URL, element, item.Level)
 			}

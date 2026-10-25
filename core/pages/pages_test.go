@@ -15,6 +15,34 @@ var (
 
 func TestParse(t *testing.T) {
 
+	cases := []struct {
+		name     string
+		input    string
+		expected []string
+		err      error
+	}{
+		{"basic", `<p><a class="c" href="/y">Y</a></p>`, []string{"/y"}, nil},
+		{"special tag", `<link rel="stylesheet" href="style.css">`, []string{}, nil},
+		{"combo", `<p><a class="c" href="/y">Y</a><a class="c" href="/no">Y</a><a class="c" href="acme.html">Y</a></p>`,
+			[]string{"/y", "/no", "acme.html"}, nil},
+		{"empty", `<p><a/></p>`, []string{}, nil},
+		{"broken HTML", `<p><a class="c" href="/y">Y<a></p>`, []string{"/y"}, nil},
+	}
+
+	for _, item := range cases {
+
+		input := []byte(item.input)
+		result, err := Parse(input)
+		if err != item.err {
+			t.Errorf("%s:unexpected error state, expected \"%v\", got \"%v\"\n", item.name, item.err, err)
+		}
+
+		if !slices.Equal(item.expected, result) {
+			t.Errorf("%s: expected %v, got: %v", item.name, item.expected, result)
+		}
+
+	}
+
 }
 
 func TestEnqueue(t *testing.T) {
