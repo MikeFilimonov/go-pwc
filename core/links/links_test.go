@@ -1,6 +1,7 @@
 package links
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 )
@@ -28,7 +29,7 @@ func TestFixURL(t *testing.T) {
 	for _, item := range cases {
 
 		result, err := FixURL(item.input)
-		if err != item.errorExpected {
+		if !errors.Is(err, item.errorExpected) {
 			t.Errorf("%s: unexpected error state: expected \"%v\", got \"%v\"",
 				item.name, item.errorExpected, err)
 			continue

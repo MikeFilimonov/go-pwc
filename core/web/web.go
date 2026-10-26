@@ -17,6 +17,7 @@ const (
 
 var (
 	ErrBadStatus      = errors.New("bad response")
+	ErrRequestFailed  = errors.New("request failed")
 	ErrUnparsableHTML = errors.New("not a parseble HTML")
 )
 
@@ -44,7 +45,7 @@ func (f *Fetcher) Fetch(url string) (*Page, error) {
 	f.init()
 	resp, err := f.client.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", ErrRequestFailed, err)
 	}
 
 	defer resp.Body.Close()
