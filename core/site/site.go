@@ -32,7 +32,13 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 		fetcher:  web.Fetcher{},
 	}
 
-	crawler.handleURL(input, input, initialLevel)
+	return crawler.crawl()
+
+}
+
+func (crawler *Crawler) crawl() (*pages.Stats, error) {
+
+	crawler.handleURL(crawler.startURL, crawler.startURL, initialLevel)
 	for len(crawler.buffer.Items) > 0 {
 
 		item, success := crawler.buffer.Dequeue()
@@ -67,7 +73,7 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 		crawler.stats.TotalBytes += len(page.Body)
 		fmt.Printf("[%v]: url:%s, level: %v \n", time.Now(), page.URL, item.Level)
 
-		if item.Level < maxDepth {
+		if item.Level < crawler.maxDepth {
 			hrefs, err := pages.Parse(page.Body)
 
 			if err != nil {

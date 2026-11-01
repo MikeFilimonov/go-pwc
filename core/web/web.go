@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	defaultFetcherTimeout = 10 * time.Second
-	contentTypeFieldName  = "Content-Type"
-	htmlHeaderValue       = "text/html"
+	DefaultFetcherTimeout = 10 * time.Second
+	ContentTypeFieldName  = "Content-Type"
+	HtmlHeaderValue       = "text/html"
 )
 
 var (
@@ -31,18 +31,25 @@ type Page struct {
 	Body []byte
 }
 
-func (f *Fetcher) init() {
+func (f *Fetcher) Init(presets *http.Client) {
+
 	if f.timeout == 0 {
-		f.timeout = defaultFetcherTimeout
+		f.timeout = DefaultFetcherTimeout
 	}
+
 	if f.client == nil {
 		f.client = &http.Client{Timeout: f.timeout}
 	}
+
+	if presets != nil {
+		f.client = presets
+	}
+
 }
 
 func (f *Fetcher) Fetch(url string) (*Page, error) {
 
-	f.init()
+	f.Init(nil)
 	resp, err := f.client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrRequestFailed, err)
@@ -54,8 +61,8 @@ func (f *Fetcher) Fetch(url string) (*Page, error) {
 		return nil, fmt.Errorf("%w: %d", ErrBadStatus, resp.StatusCode)
 	}
 
-	hdrValue := resp.Header.Get(contentTypeFieldName)
-	if !strings.HasPrefix(hdrValue, htmlHeaderValue) {
+	hdrValue := resp.Header.Get(ContentTypeFieldName)
+	if !strings.HasPrefix(hdrValue, HtmlHeaderValue) {
 		return nil, ErrUnparsableHTML
 	}
 
