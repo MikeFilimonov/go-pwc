@@ -21,10 +21,9 @@ func TestCrawl(t *testing.T) {
 			<a class="c" href="/main/about.html">About</a>	
 		</p>`,
 		"http://it.works/main/news.html": `<p><a class="c" href="/main/news.html">News
-				<p>
 					<a class="c" href="/main/news/economy.html">Economy</a>
 					<a class="c" href="/main/news/science.html">Science</a>
-				</p></a>
+			</a>
 		</p>`,
 		"http://it.works/main/about.html":        `<p><a class="c" href="/main/about.html">About</a></p>`,
 		"http://it.works/main/news/science.html": `<p><a class="c" href="/main/news/science.html">Science</a></p>`,
@@ -92,10 +91,17 @@ func TestCrawl(t *testing.T) {
 
 				url, err := links.Complete(input, r.URL.Path)
 				if err != nil {
-					t.Errorf("failed to get the full url from the path: %v", r.URL.Path)
+					t.Errorf("unable to complete full url from the path: %v", r.URL.Path)
+					http.NotFound(w, r)
 					return
 				}
-				contents := v.metasite[url.String()]
+				contents, found := v.metasite[url.String()]
+				if !found {
+					t.Errorf("missing contents for %v", url.String())
+					http.NotFound(w, r)
+					return
+				}
+
 				w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
 				w.Write([]byte(contents))
 
