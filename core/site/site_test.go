@@ -30,11 +30,10 @@ func TestCrawl(t *testing.T) {
 	}
 
 	cases := []struct {
-		name     string
-		maxDepth int
-		input    string
-		metasite map[string]string
-
+		name         string
+		maxDepth     int
+		input        string
+		metasite     map[string]string
 		stats        pages.Stats
 		expectedUrls []string
 	}{
@@ -66,45 +65,8 @@ func TestCrawl(t *testing.T) {
 			input := v.input
 			maxDepth := v.maxDepth
 
-			for _, u := range v.expectedUrls {
-
-				url, err := links.Complete(input, u)
-				if err == nil {
-
-					value, found := v.metasite[url.String()]
-					if found {
-						v.stats.TotalBytes += len([]byte(value))
-					}
-
-				}
-
-			}
-
-			handler := func(w http.ResponseWriter, r *http.Request) {
-
-				if !slices.Contains(v.expectedUrls, r.URL.Path) {
-					t.Errorf("unexpected request path: %q", r.URL.Path)
-					http.NotFound(w, r)
-					return
-				}
-
-				url, err := links.Complete(input, r.URL.Path)
-				if err != nil {
-					t.Errorf("unable to complete full url from the path: %v", r.URL.Path)
-					http.NotFound(w, r)
-					return
-				}
-				contents, found := v.metasite[url.String()]
-				if !found {
-					t.Errorf("missing contents for %v", url.String())
-					http.NotFound(w, r)
-					return
-				}
-
-				w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
-				w.Write([]byte(contents))
-
-			}
+			v.stats.TotalBytes = totalBytes(t, v.expectedUrls, input, v.metasite)
+			handler := handler(t, input, v.expectedUrls, v.metasite)
 
 			srv := httptest.NewServer(http.HandlerFunc(handler))
 			defer srv.Close()
@@ -137,31 +99,91 @@ func TestCrawl(t *testing.T) {
 
 			crawler.fetcher.Init(config)
 
-			pages, err := crawler.crawl()
+			results, err := crawler.crawl()
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			} else {
-
-				if pages.PageCount != v.stats.PageCount {
-					t.Errorf("unexpected page count: expected %v, discovered %v",
-						v.stats.PageCount, pages.PageCount)
-				}
-
-				if pages.TotalBytes != v.stats.TotalBytes {
-					t.Errorf("unexpected total size (bytes): expected %v, got %v",
-						v.stats.TotalBytes, pages.TotalBytes)
-				}
-
-				if pages.LinksFound != v.stats.LinksFound {
-					t.Errorf("unexpected found links count (items): expected %v, got %v",
-						v.stats.LinksFound, pages.LinksFound)
-				}
-
+				detectCrawlErrors(t, results, v.stats)
 			}
 
 		})
 
+	}
+
+}
+
+func totalBytes(t *testing.T, expectedUrls []string, input string, metasite map[string]string) int {
+
+	t.Helper()
+
+	result := 0
+	for _, u := range expectedUrls {
+
+		url, err := links.Complete(input, u)
+		if err != nil {
+			t.Errorf("unable to complete the url: %v", u)
+			return 0
+		}
+
+		value, found := metasite[url.String()]
+		if found {
+			result += len([]byte(value))
+		}
+
+	}
+
+	return result
+
+}
+
+func handler(t *testing.T, input string, expectedUrls []string, metasite map[string]string) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if !slices.Contains(expectedUrls, r.URL.Path) {
+			t.Errorf("unexpected request path: %q", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+
+		url, err := links.Complete(input, r.URL.Path)
+		if err != nil {
+			t.Errorf("unable to complete full url from the path: %v", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		contents, found := metasite[url.String()]
+		if !found {
+			t.Errorf("missing contents for %v", url.String())
+			http.NotFound(w, r)
+			return
+		}
+
+		w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
+		w.Write([]byte(contents))
+
+	}
+
+}
+
+func detectCrawlErrors(t *testing.T, results *pages.Stats, expectedMetrics pages.Stats) {
+
+	t.Helper()
+
+	if results.PageCount != expectedMetrics.PageCount {
+		t.Errorf("unexpected page count: expected %v, discovered %v",
+			expectedMetrics.PageCount, results.PageCount)
+	}
+
+	if results.TotalBytes != expectedMetrics.TotalBytes {
+		t.Errorf("unexpected total size (bytes): expected %v, got %v",
+			expectedMetrics.TotalBytes, results.TotalBytes)
+	}
+
+	if results.LinksFound != expectedMetrics.LinksFound {
+		t.Errorf("unexpected found links count (items): expected %v, got %v",
+			expectedMetrics.LinksFound, results.LinksFound)
 	}
 
 }
