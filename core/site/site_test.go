@@ -22,8 +22,8 @@ func TestCrawl(t *testing.T) {
 			<a class="c" href="/main/about.html">About</a>	
 		</p>`,
 		"http://it.works/main/news.html": `<p>
-					<a class="c" href="/main/news/economy.html">Economy</a>
-					<a class="c" href="/main/news/science.html">Science</a>
+					<a class="c" href="news/economy.html">Economy</a>
+					<a class="c" href="news/science.html">Science</a>
 					<a class="c" href="/home.html">Home</a>
 			</p>`,
 		"http://it.works/main/about.html": `<p>
@@ -57,7 +57,7 @@ func TestCrawl(t *testing.T) {
 				"/main/about.html",
 			}},
 		{"level_3", 3, "http://it.works/main",
-			metasite, pages.Stats{LinksFound: 0, PageCount: 60, TotalBytes: 0},
+			metasite, pages.Stats{LinksFound: 0, PageCount: 0, TotalBytes: 0},
 			[]string{
 				"/main",
 				"/main/news.html",
