@@ -122,13 +122,14 @@ func totalBytes(t *testing.T, expectedUrls []string, input string, metasite map[
 
 		url, err := links.Complete(input, u)
 		if err != nil {
-			t.Errorf("unable to complete the url: %v", u)
-			return 0
+			t.Fatalf("unable to complete the url: %v (%v)", u, err)
 		}
 
 		value, found := metasite[url.String()]
 		if found {
 			result += len([]byte(value))
+		} else {
+			t.Errorf("missing page contents for url \"%s\"", value)
 		}
 
 	}
