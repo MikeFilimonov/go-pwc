@@ -20,11 +20,10 @@ func TestCrawl(t *testing.T) {
 			<a class="c" href="/main/news.html">News</a>
 			<a class="c" href="/main/about.html">About</a>	
 		</p>`,
-		"http://it.works/main/news.html": `<p><a class="c" href="/main/news.html">News
+		"http://it.works/main/news.html": `<p>
 					<a class="c" href="/main/news/economy.html">Economy</a>
 					<a class="c" href="/main/news/science.html">Science</a>
-			</a>
-		</p>`,
+			</p>`,
 		"http://it.works/main/about.html":        `<p><a class="c" href="/main/about.html">About</a></p>`,
 		"http://it.works/main/news/science.html": `<p><a class="c" href="/main/news/science.html">Science</a></p>`,
 		"http://it.works/main/news/economy.html": `<p><a class="c" href="/main/news/economy.html">Economy</a></p>`,
