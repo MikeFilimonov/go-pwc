@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"sync"
 	"testing"
 
 	"github.com/MikeFilimonov/go-pwc/core/links"
@@ -23,10 +24,18 @@ func TestCrawl(t *testing.T) {
 		"http://it.works/main/news.html": `<p>
 					<a class="c" href="/main/news/economy.html">Economy</a>
 					<a class="c" href="/main/news/science.html">Science</a>
+					<a class="c" href="/home.html">Home</a>
 			</p>`,
-		"http://it.works/main/about.html":        `<p><a class="c" href="/main/about.html">About</a></p>`,
+		"http://it.works/main/about.html": `<p>
+			<a class="c" href="/main/about.html">About</a>
+			<a class="c" href="/home.html">Home</a>
+			</p>`,
 		"http://it.works/main/news/science.html": `<p><a class="c" href="/main/news/science.html">Science</a></p>`,
 		"http://it.works/main/news/economy.html": `<p><a class="c" href="/main/news/economy.html">Economy</a></p>`,
+		"http://it.works/home.html": `<p>
+			<a class="c" href="/home.html">Home</a>
+			<a class="c" href="/main"> Main </a>		
+		</p>`,
 	}
 
 	cases := []struct {
@@ -38,23 +47,34 @@ func TestCrawl(t *testing.T) {
 		expectedUrls []string
 	}{
 		{"one_level_deep", 1, "http://it.works/main",
-			metasite, pages.Stats{LinksFound: 1, PageCount: 1, TotalBytes: 0},
+			metasite, pages.Stats{LinksFound: 0, PageCount: 0, TotalBytes: 0},
 			[]string{"/main"}},
 		{"a_level_deeper", 2, "http://it.works/main",
-			metasite, pages.Stats{LinksFound: 3, PageCount: 3, TotalBytes: 0},
+			metasite, pages.Stats{LinksFound: 0, PageCount: 0, TotalBytes: 0},
 			[]string{
 				"/main",
 				"/main/news.html",
 				"/main/about.html",
 			}},
 		{"level_3", 3, "http://it.works/main",
-			metasite, pages.Stats{LinksFound: 5, PageCount: 5, TotalBytes: 0},
+			metasite, pages.Stats{LinksFound: 0, PageCount: 60, TotalBytes: 0},
 			[]string{
 				"/main",
 				"/main/news.html",
 				"/main/about.html",
 				"/main/news/science.html",
 				"/main/news/economy.html",
+				"/home.html",
+			}},
+		{"crosslinks", 4, "http://it.works/main",
+			metasite, pages.Stats{LinksFound: 0, PageCount: 0, TotalBytes: 0},
+			[]string{
+				"/main",
+				"/main/news.html",
+				"/main/about.html",
+				"/main/news/science.html",
+				"/main/news/economy.html",
+				"/home.html",
 			}},
 	}
 
@@ -62,16 +82,20 @@ func TestCrawl(t *testing.T) {
 
 		t.Run(v.name, func(t *testing.T) {
 
+			seenSet := make(map[string]struct{})
 			input := v.input
 			maxDepth := v.maxDepth
 
 			v.stats.TotalBytes = totalBytes(t, v.expectedUrls, input, v.metasite)
-			handler := handler(t, input, v.expectedUrls, v.metasite)
+			v.stats.LinksFound = len(v.expectedUrls)
+			v.stats.PageCount = len(v.expectedUrls)
+			handler := handler(t, input, v.expectedUrls, v.metasite, seenSet)
 
 			srv := httptest.NewServer(http.HandlerFunc(handler))
 			defer srv.Close()
 			destination := srv.Listener.Addr().String()
 
+			// no ip support results into manual mapping for pseudo-dns
 			transport := &http.Transport{
 				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 
@@ -138,7 +162,9 @@ func totalBytes(t *testing.T, expectedUrls []string, input string, metasite map[
 
 }
 
-func handler(t *testing.T, input string, expectedUrls []string, metasite map[string]string) func(http.ResponseWriter, *http.Request) {
+func handler(t *testing.T, input string, expectedUrls []string, metasite map[string]string, seenSet map[string]struct{}) func(http.ResponseWriter, *http.Request) {
+
+	var seenSetLock sync.Mutex
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -154,9 +180,21 @@ func handler(t *testing.T, input string, expectedUrls []string, metasite map[str
 			http.NotFound(w, r)
 			return
 		}
-		contents, found := metasite[url.String()]
+
+		fullUrl := url.String()
+
+		seenSetLock.Lock()
+		_, isDuplicate := seenSet[fullUrl]
+		seenSet[fullUrl] = struct{}{}
+		seenSetLock.Unlock()
+
+		if isDuplicate {
+			t.Errorf("duplicate path detected: %v", r.URL.Path)
+		}
+
+		contents, found := metasite[fullUrl]
 		if !found {
-			t.Errorf("missing contents for %v", url.String())
+			t.Errorf("missing contents for %v", fullUrl)
 			http.NotFound(w, r)
 			return
 		}
