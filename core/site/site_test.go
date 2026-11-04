@@ -137,6 +137,165 @@ func TestCrawl(t *testing.T) {
 
 }
 
+func TestCrawlContinueAfterFetchError(t *testing.T) {
+
+	input := "http://it.works/main"
+	maxDepth := 2
+
+	mainHTML := `<p>
+		<a href="/faulty">Faulty</a>
+		<a href="/ok"> It works</a>
+		</p>`
+	activePage := `<p> It works </p>`
+
+	stats := pages.Stats{
+		TotalBytes: len([]byte(mainHTML)) + len([]byte(activePage)),
+		LinksFound: 3,
+		PageCount:  2,
+	}
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+
+		switch r.URL.Path {
+		case "/main":
+
+			w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
+			w.Write([]byte(mainHTML))
+
+		case "/faulty":
+			http.NotFound(w, r)
+		case "/ok":
+
+			w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
+			w.Write([]byte(activePage))
+		default:
+			t.Errorf("unexpected url: %v", r.URL.Path)
+			http.NotFound(w, r)
+
+		}
+
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(handler))
+	defer srv.Close()
+	destination := srv.Listener.Addr().String()
+
+	// no ip support results into manual mapping for pseudo-dns
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+
+			dailer := net.Dialer{}
+			return dailer.DialContext(ctx, network, destination)
+
+		},
+	}
+
+	defer transport.CloseIdleConnections()
+
+	config := &http.Client{
+		Timeout:   web.DefaultFetcherTimeout,
+		Transport: transport,
+	}
+
+	crawler := Crawler{
+		buffer:   pages.Buffer{},
+		maxDepth: maxDepth,
+		startURL: input,
+		seenSet:  pages.PagesSeen{},
+		stats:    pages.Stats{},
+		fetcher:  web.Fetcher{},
+	}
+
+	crawler.fetcher.Init(config)
+
+	results, err := crawler.crawl()
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	} else {
+		detectCrawlErrors(t, results, stats)
+	}
+
+}
+
+func TestCrawlFiltersDomains(t *testing.T) {
+
+	input := "http://it.works/main"
+	maxDepth := 2
+
+	mainHTML := `<p>
+		<a href="http://now.it.works/fine">This is fine</a>
+		<a href="http://sixseven.com/stopit.html">Six-seven? Not today!</a>
+		</p>`
+	activePage := `<p><a href="http://now.it.works/fine">This is fine</a></p>`
+	stats := pages.Stats{
+		TotalBytes: len([]byte(mainHTML)) + len([]byte(activePage)),
+		LinksFound: 2,
+		PageCount:  2,
+	}
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+
+		switch r.URL.Path {
+		case "/main":
+
+			w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
+			w.Write([]byte(mainHTML))
+
+		case "/fine":
+
+			w.Header().Add(web.ContentTypeFieldName, web.HtmlHeaderValue)
+			w.Write([]byte(activePage))
+		default:
+			t.Errorf("unexpected url: %v", r.URL.Path)
+			http.NotFound(w, r)
+
+		}
+
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(handler))
+	defer srv.Close()
+	destination := srv.Listener.Addr().String()
+
+	// no ip support results into manual mapping for pseudo-dns
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+
+			dailer := net.Dialer{}
+			return dailer.DialContext(ctx, network, destination)
+
+		},
+	}
+
+	defer transport.CloseIdleConnections()
+
+	config := &http.Client{
+		Timeout:   web.DefaultFetcherTimeout,
+		Transport: transport,
+	}
+
+	crawler := Crawler{
+		buffer:   pages.Buffer{},
+		maxDepth: maxDepth,
+		startURL: input,
+		seenSet:  pages.PagesSeen{},
+		stats:    pages.Stats{},
+		fetcher:  web.Fetcher{},
+	}
+
+	crawler.fetcher.Init(config)
+
+	results, err := crawler.crawl()
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	} else {
+		detectCrawlErrors(t, results, stats)
+	}
+
+}
+
 func totalBytes(t *testing.T, expectedUrls []string, input string, metasite map[string]string) int {
 
 	t.Helper()
