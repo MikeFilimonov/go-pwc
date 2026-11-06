@@ -49,12 +49,15 @@ func (crawler *Crawler) crawl() (*pages.Stats, error) {
 		if err != nil {
 			continue
 		}
-		isFromSameZone, err := links.IsFromSameZone(crawler.startURL, page.URL)
+
+		pageURLValue := page.URL
+
+		isFromSameZone, err := links.IsFromSameZone(crawler.startURL, pageURLValue)
 		if err != nil || !isFromSameZone {
 			continue
 		}
 
-		pageURL, err := url.Parse(page.URL)
+		pageURL, err := url.Parse(pageURLValue)
 		if err != nil {
 			continue
 		}
@@ -71,7 +74,7 @@ func (crawler *Crawler) crawl() (*pages.Stats, error) {
 
 		crawler.stats.PageCount++
 		crawler.stats.TotalBytes += len(page.Body)
-		fmt.Printf("[%v]: url:%s, level: %v \n", time.Now(), page.URL, item.Level)
+		fmt.Printf("[%v]: url:%s, level: %v \n", time.Now(), pageURLValue, item.Level)
 
 		if item.Level < crawler.maxDepth {
 			hrefs, err := pages.Parse(page.Body)
@@ -80,8 +83,10 @@ func (crawler *Crawler) crawl() (*pages.Stats, error) {
 				continue
 			}
 
+			page = nil
+
 			for _, element := range hrefs {
-				crawler.handleURL(page.URL, element, item.Level)
+				crawler.handleURL(pageURLValue, element, item.Level)
 			}
 
 		}
