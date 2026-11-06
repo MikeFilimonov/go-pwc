@@ -55,15 +55,32 @@ func (crawler *Crawler) crawl() (*pages.Stats, error) {
 	crawler.handleURL(crawler.startURL, crawler.startURL, initialLevel)
 
 	jobsInFlight := 0
+	currentLevel := 0
 
 	for len(crawler.buffer.Items) > 0 || jobsInFlight > 0 {
 
-		item, success := crawler.buffer.Dequeue()
-		if !success {
-			continue
+		var nextJob pages.Item
+		var dispatcher chan pages.Item
+
+		if len(crawler.buffer.Items) > 0 {
+			nextJob = crawler.buffer.Items[0]
+			if jobsInFlight == 0 {
+				currentLevel = nextJob.Level
+			}
+
+			if nextJob.Level == currentLevel {
+				dispatcher = jobs
+			}
 		}
-		page, err := crawler.fetcher.Fetch(item.URL)
-		crawler.processResult(result{item, page, err})
+
+		select {
+		case dispatcher <- nextJob:
+			crawler.buffer.Dequeue()
+			jobsInFlight++
+		case outcome := <-results:
+			jobsInFlight--
+			crawler.processResult(outcome)
+		}
 
 	}
 	close(jobs)
