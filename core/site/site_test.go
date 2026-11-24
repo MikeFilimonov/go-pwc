@@ -296,7 +296,7 @@ func TestCrawlFiltersDomains(t *testing.T) {
 
 }
 
-func totalBytes(t *testing.T, expectedUrls []string, input string, metasite map[string]string) int {
+func totalBytes(t testing.TB, expectedUrls []string, input string, metasite map[string]string) int {
 
 	t.Helper()
 
@@ -365,7 +365,7 @@ func handler(t *testing.T, input string, expectedUrls []string, metasite map[str
 
 }
 
-func detectCrawlErrors(t *testing.T, results *pages.Stats, expectedMetrics pages.Stats) {
+func detectCrawlErrors(t testing.TB, results *pages.Stats, expectedMetrics pages.Stats) {
 
 	t.Helper()
 
