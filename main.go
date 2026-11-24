@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"log"
@@ -29,7 +30,9 @@ func main() {
 		os.Exit(2)
 	}
 
-	stats, err := site.Crawl(input, params.MaxDepth)
+	ctx := context.Background()
+
+	stats, err := site.Crawl(ctx, input, params.MaxDepth)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

@@ -1,6 +1,7 @@
 package site
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
@@ -9,9 +10,9 @@ import (
 	"github.com/MikeFilimonov/go-pwc/core/pages"
 )
 
-func (crawler *Crawler) processPage(item *pages.Item) {
+func (crawler *Crawler) processPage(ctx context.Context, item *pages.Item) {
 
-	page, err := crawler.fetcher.Fetch(item.URL)
+	page, err := crawler.fetcher.Fetch(ctx, item.URL)
 	if err != nil {
 		return
 	}

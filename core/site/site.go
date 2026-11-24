@@ -1,7 +1,9 @@
 package site
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/MikeFilimonov/go-pwc/core/links"
 	"github.com/MikeFilimonov/go-pwc/core/pages"
@@ -9,8 +11,9 @@ import (
 )
 
 const (
-	initialLevel = 0
-	workerLimit  = 9
+	initialLevel            = 0
+	workerLimit             = 9
+	gracefulShutdownTimeout = 5
 )
 
 type Crawler struct {
@@ -23,7 +26,7 @@ type Crawler struct {
 	mtx      sync.Mutex
 }
 
-func Crawl(input string, maxDepth int) (*pages.Stats, error) {
+func Crawl(ctx context.Context, input string, maxDepth int) (*pages.Stats, error) {
 
 	crawler := Crawler{
 		buffer:   pages.Buffer{},
@@ -34,12 +37,18 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 		fetcher:  web.Fetcher{},
 	}
 
-	return crawler.crawl()
+	return crawler.crawl(ctx)
 
 }
 
-func (crawler *Crawler) crawl() (*pages.Stats, error) {
+func (crawler *Crawler) crawl(ctx context.Context) (*pages.Stats, error) {
 
+	completed := make(chan (struct{}))
+	graceDuration := time.Second * gracefulShutdownTimeout
+
+	requestCtx := context.WithoutCancel(ctx)
+	cancellationContext, cancelFunc := context.WithCancel(requestCtx)
+	defer cancelFunc()
 	source := make(chan (pages.Item))
 	var workerTracker sync.WaitGroup
 	var jobs sync.WaitGroup
@@ -47,16 +56,23 @@ func (crawler *Crawler) crawl() (*pages.Stats, error) {
 	crawler.handleURL(crawler.startURL, crawler.startURL, initialLevel)
 	crawler.fetcher.Init(nil)
 
+	workerTracker.Go(func() {
+		watcher(ctx, completed, graceDuration, cancelFunc)
+	})
+
 	for range workerLimit {
 
 		workerTracker.Go(func() {
+
 			for page := range source {
-				crawler.processPage(&page)
+				crawler.processPage(cancellationContext, &page)
 				jobs.Done()
 			}
 		})
 
 	}
+
+GracefulShutdown:
 
 	for {
 
@@ -73,15 +89,23 @@ func (crawler *Crawler) crawl() (*pages.Stats, error) {
 			crawler.mtx.Unlock()
 			if success {
 				jobs.Add(1)
-				source <- page
+				select {
+				case source <- page:
+				case <-ctx.Done():
+					jobs.Done()
+					break GracefulShutdown
+				}
 
 			}
 		}
+
 		jobs.Wait()
 	}
 	close(source)
-
+	jobs.Wait()
+	close(completed)
 	workerTracker.Wait()
+
 	crawler.stats.LinksFound = crawler.seenSet.Len()
 
 	return &crawler.stats, nil
@@ -114,5 +138,26 @@ func (c *Crawler) handleURL(baseURL, href string, parentLevel int) {
 	c.seenSet.Add(normalized)
 	item := pages.Item{URL: normalized, Level: parentLevel + 1}
 	c.buffer.Enqueue(item)
+
+}
+
+func watcher(stopContext context.Context, completed <-chan struct{}, graceTimeout time.Duration, cancelCallback context.CancelFunc) {
+
+	select {
+	case <-completed:
+		return
+		//no default needed, waiting is intentional
+	case <-stopContext.Done():
+	}
+
+	timer := time.NewTimer(graceTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-completed:
+		return
+	case <-timer.C:
+		cancelCallback()
+	}
 
 }

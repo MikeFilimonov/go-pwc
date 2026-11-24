@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -15,12 +16,13 @@ func TestFetch(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	}
 
+	ctx := context.Background()
 	failard := httptest.NewServer(http.HandlerFunc(handler))
 	url := failard.URL
 	failard.Close()
 
 	fetcher := Fetcher{}
-	page, err := fetcher.Fetch(url)
+	page, err := fetcher.Fetch(ctx, url)
 	if !errors.Is(err, ErrRequestFailed) {
 		t.Errorf("server unreachable: unexpected error state: \"%v\", got \"%v\"",
 			ErrRequestFailed, err)
@@ -62,7 +64,7 @@ func TestFetch(t *testing.T) {
 
 	for _, item := range cases {
 
-		page, err = fetcher.Fetch(srv.URL + item.input)
+		page, err = fetcher.Fetch(ctx, srv.URL+item.input)
 		if !errors.Is(err, item.expectedError) {
 			t.Errorf("%s: unexpected error, expected \"%v\", got \"%v\"",
 				item.name, item.expectedError, err)

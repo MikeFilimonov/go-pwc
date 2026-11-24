@@ -76,7 +76,7 @@ func TestCrawlConcurrentRequests(t *testing.T) {
 			}
 
 			var singletone sync.Once
-
+			ctx := context.Background()
 			handler := handler(t, item.input, item.expectedUrls, item.metasite, seenSet)
 
 			wrapper := func(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +138,7 @@ func TestCrawlConcurrentRequests(t *testing.T) {
 			timer := time.After(timeout)
 
 			go func() {
-				stats, failure = crawler.crawl()
+				stats, failure = crawler.crawl(ctx)
 				close(crawlery)
 			}()
 

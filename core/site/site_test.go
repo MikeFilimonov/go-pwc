@@ -82,6 +82,7 @@ func TestCrawl(t *testing.T) {
 
 		t.Run(v.name, func(t *testing.T) {
 
+			ctx := context.Background()
 			seenSet := make(map[string]struct{})
 			input := v.input
 			maxDepth := v.maxDepth
@@ -123,7 +124,7 @@ func TestCrawl(t *testing.T) {
 
 			crawler.fetcher.Init(config)
 
-			results, err := crawler.crawl()
+			results, err := crawler.crawl(ctx)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -154,6 +155,7 @@ func TestCrawlContinueAfterFetchError(t *testing.T) {
 		PageCount:  2,
 	}
 
+	ctx := context.Background()
 	handler := func(w http.ResponseWriter, r *http.Request) {
 
 		switch r.URL.Path {
@@ -208,7 +210,7 @@ func TestCrawlContinueAfterFetchError(t *testing.T) {
 
 	crawler.fetcher.Init(config)
 
-	results, err := crawler.crawl()
+	results, err := crawler.crawl(ctx)
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -222,7 +224,7 @@ func TestCrawlFiltersDomains(t *testing.T) {
 
 	input := "http://it.works/main"
 	maxDepth := 2
-
+	ctx := context.Background()
 	mainHTML := `<p>
 		<a href="http://now.it.works/fine">This is fine</a>
 		<a href="http://sixseven.com/stopit.html">Six-seven? Not today!</a>
@@ -286,7 +288,7 @@ func TestCrawlFiltersDomains(t *testing.T) {
 
 	crawler.fetcher.Init(config)
 
-	results, err := crawler.crawl()
+	results, err := crawler.crawl(ctx)
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)

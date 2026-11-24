@@ -103,8 +103,8 @@ func BenchmarkCrawl(b *testing.B) {
 		}
 
 		crawler.fetcher.Init(config)
-
-		results, err := crawler.crawl()
+		ctx := context.Background()
+		results, err := crawler.crawl(ctx)
 
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)

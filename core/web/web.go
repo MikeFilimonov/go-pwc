@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -47,10 +48,14 @@ func (f *Fetcher) Init(presets *http.Client) {
 
 }
 
-func (f *Fetcher) Fetch(url string) (*Page, error) {
+func (f *Fetcher) Fetch(ctx context.Context, url string) (*Page, error) {
 
 	f.Init(nil)
-	resp, err := f.client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrRequestFailed, err)
+	}
+	resp, err := f.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrRequestFailed, err)
 	}
