@@ -121,7 +121,6 @@ func (b *Buffer) optimizeAllocation() {
 
 type PagesSeen struct {
 	elements map[string]struct{} //[normalized url]
-
 }
 
 func (p *PagesSeen) Add(url string) {

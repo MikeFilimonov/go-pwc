@@ -1,16 +1,17 @@
 package site
 
 import (
-	"fmt"
-	"net/url"
-	"time"
+	"sync"
 
 	"github.com/MikeFilimonov/go-pwc/core/links"
 	"github.com/MikeFilimonov/go-pwc/core/pages"
 	"github.com/MikeFilimonov/go-pwc/core/web"
 )
 
-const initialLevel = 0
+const (
+	initialLevel = 0
+	workerLimit  = 9
+)
 
 type Crawler struct {
 	buffer   pages.Buffer
@@ -19,6 +20,7 @@ type Crawler struct {
 	seenSet  pages.PagesSeen
 	stats    pages.Stats
 	fetcher  web.Fetcher
+	mtx      sync.Mutex
 }
 
 func Crawl(input string, maxDepth int) (*pages.Stats, error) {
@@ -38,61 +40,48 @@ func Crawl(input string, maxDepth int) (*pages.Stats, error) {
 
 func (crawler *Crawler) crawl() (*pages.Stats, error) {
 
+	source := make(chan (pages.Item))
+	var workerTracker sync.WaitGroup
+	var jobs sync.WaitGroup
+
 	crawler.handleURL(crawler.startURL, crawler.startURL, initialLevel)
-	for len(crawler.buffer.Items) > 0 {
+	crawler.fetcher.Init(nil)
 
-		item, success := crawler.buffer.Dequeue()
-		if !success {
-			continue
-		}
-		page, err := crawler.fetcher.Fetch(item.URL)
-		if err != nil {
-			continue
-		}
+	for range workerLimit {
 
-		pageURLValue := page.URL
-
-		isFromSameZone, err := links.IsFromSameZone(crawler.startURL, pageURLValue)
-		if err != nil || !isFromSameZone {
-			continue
-		}
-
-		pageURL, err := url.Parse(pageURLValue)
-		if err != nil {
-			continue
-		}
-
-		normalizedPageURL := links.Normalize(pageURL)
-
-		isDuplicate := item.URL != normalizedPageURL &&
-			crawler.seenSet.Has(normalizedPageURL)
-		if isDuplicate {
-			continue
-		}
-
-		crawler.seenSet.Add(normalizedPageURL)
-
-		crawler.stats.PageCount++
-		crawler.stats.TotalBytes += len(page.Body)
-		fmt.Printf("[%v]: url:%s, level: %v \n", time.Now(), pageURLValue, item.Level)
-
-		if item.Level < crawler.maxDepth {
-			hrefs, err := pages.Parse(page.Body)
-
-			if err != nil {
-				continue
+		workerTracker.Go(func() {
+			for page := range source {
+				crawler.processPage(&page)
+				jobs.Done()
 			}
-
-			page = nil
-
-			for _, element := range hrefs {
-				crawler.handleURL(pageURLValue, element, item.Level)
-			}
-
-		}
+		})
 
 	}
 
+	for {
+
+		crawler.mtx.Lock()
+		itemsToHandle := len(crawler.buffer.Items)
+		crawler.mtx.Unlock()
+		if itemsToHandle == 0 {
+			break
+		}
+
+		for range itemsToHandle {
+			crawler.mtx.Lock()
+			page, success := crawler.buffer.Dequeue()
+			crawler.mtx.Unlock()
+			if success {
+				jobs.Add(1)
+				source <- page
+
+			}
+		}
+		jobs.Wait()
+	}
+	close(source)
+
+	workerTracker.Wait()
 	crawler.stats.LinksFound = crawler.seenSet.Len()
 
 	return &crawler.stats, nil
@@ -112,7 +101,13 @@ func (c *Crawler) handleURL(baseURL, href string, parentLevel int) {
 		return
 	}
 	isFromSameDomain, err := links.IsFromSameZone(c.startURL, normalized)
-	if err != nil || !isFromSameDomain || c.seenSet.Has(normalized) {
+	if err != nil || !isFromSameDomain {
+		return
+	}
+
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	if c.seenSet.Has(normalized) {
 		return
 	}
 
