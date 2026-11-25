@@ -65,7 +65,10 @@ func (crawler *Crawler) crawl(ctx context.Context) (*pages.Stats, error) {
 		workerTracker.Go(func() {
 
 			for page := range source {
-				crawler.processPage(cancellationContext, &page)
+
+				if ctx.Err() == nil {
+					crawler.processPage(cancellationContext, &page)
+				}
 				jobs.Done()
 			}
 		})
@@ -84,6 +87,11 @@ GracefulShutdown:
 		}
 
 		for range itemsToHandle {
+
+			if ctx.Err() != nil {
+				break GracefulShutdown
+			}
+
 			crawler.mtx.Lock()
 			page, success := crawler.buffer.Dequeue()
 			crawler.mtx.Unlock()
@@ -105,10 +113,11 @@ GracefulShutdown:
 	jobs.Wait()
 	close(completed)
 	workerTracker.Wait()
-
+	// cleanup after a graceful shutdown termination
+	crawler.buffer = pages.Buffer{}
 	crawler.stats.LinksFound = crawler.seenSet.Len()
 
-	return &crawler.stats, nil
+	return &crawler.stats, ctx.Err()
 
 }
 

@@ -6,6 +6,8 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/MikeFilimonov/go-pwc/config"
 	"github.com/MikeFilimonov/go-pwc/core/links"
@@ -30,10 +32,13 @@ func main() {
 		os.Exit(2)
 	}
 
-	ctx := context.Background()
+	backgroundCtx := context.Background()
+	ctx, stopSignals := signal.NotifyContext(backgroundCtx, os.Interrupt,
+		syscall.SIGTERM)
+	defer stopSignals()
 
 	stats, err := site.Crawl(ctx, input, params.MaxDepth)
-	if err != nil {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Println(err)
 		os.Exit(1)
 	}
